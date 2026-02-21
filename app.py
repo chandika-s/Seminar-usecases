@@ -4,7 +4,7 @@ import time
 import json
 import threading
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
@@ -100,20 +100,42 @@ def readyz():
 
     return jsonify(ready=True)
 
+def format_uptime(seconds: int) -> str:
+    """Return human-readable uptime e.g. '2m 15s' or '1h 5m'."""
+    if seconds < 60:
+        return f"{seconds}s"
+    if seconds < 3600:
+        m, s = divmod(seconds, 60)
+        return f"{m}m {s}s" if s else f"{m}m"
+    h, rest = divmod(seconds, 3600)
+    m, s = divmod(rest, 60)
+    if m or s:
+        return f"{h}h {m}m {s}s" if s else f"{h}h {m}m"
+    return f"{h}h"
+
 @app.get("/")
 def root():
-    return jsonify(
-        message="agentic-devops-demo-app",
-        uptime_seconds=int(time.time() - BOOT_TIME),
-        env={
-            "FAIL_MODE": os.getenv("FAIL_MODE", ""),
-            "REQUIRE_ENV": os.getenv("REQUIRE_ENV", "0"),
-            "REQUIRE_CONFIG": os.getenv("REQUIRE_CONFIG", "0"),
-            "CONFIG_PATH": os.getenv("CONFIG_PATH", "/config/config.json"),
-            "STARTUP_DELAY_SECONDS": os.getenv("STARTUP_DELAY_SECONDS", "0"),
-            "FORCE_NOT_READY": os.getenv("FORCE_NOT_READY", "0"),
-            "MEMORY_HOG_MB": os.getenv("MEMORY_HOG_MB", "0"),
-        }
+    uptime_seconds = int(time.time() - BOOT_TIME)
+    env = {
+        "FAIL_MODE": os.getenv("FAIL_MODE", ""),
+        "REQUIRE_ENV": os.getenv("REQUIRE_ENV", "0"),
+        "REQUIRE_CONFIG": os.getenv("REQUIRE_CONFIG", "0"),
+        "CONFIG_PATH": os.getenv("CONFIG_PATH", "/config/config.json"),
+        "STARTUP_DELAY_SECONDS": os.getenv("STARTUP_DELAY_SECONDS", "0"),
+        "FORCE_NOT_READY": os.getenv("FORCE_NOT_READY", "0"),
+        "MEMORY_HOG_MB": os.getenv("MEMORY_HOG_MB", "0"),
+    }
+    if request.args.get("json") == "1":
+        return jsonify(
+            message="agentic-devops-demo-app",
+            uptime_seconds=uptime_seconds,
+            env=env,
+        )
+    return render_template(
+        "index.html",
+        title="Agentic DevOps Demo App",
+        uptime_human=format_uptime(uptime_seconds),
+        env=env,
     )
 
 def main():
