@@ -1,5 +1,12 @@
 # EKS Agentic DevOps Agent Demo Guide
 
+## Build and run the container locally
+
+```
+docker build -t demo-app:latest .
+docker run -p 8080:8080 demo-app:latest
+```
+
 This guide walks through deterministic failure simulations for:
 
 1.  CrashLoopBackOff (bad config / missing env)
