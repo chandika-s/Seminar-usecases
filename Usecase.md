@@ -1,205 +1,235 @@
-DevOps Use Cases Resolvable by Agentic AI
-1) CrashLoopBackOff due to bad config / missing env
-Why it’s common: config drift, wrong ConfigMap/Secret key, typo in env name, bad feature flag.
-Alert trigger (typical)
+# DevOps Use Cases Resolvable by Agentic AI
 
+------------------------------------------------------------------------
 
+## 1) CrashLoopBackOff due to Bad Config / Missing Env
+
+**Why it's common** - Config drift\
+- Wrong ConfigMap/Secret key\
+- Typo in environment variable name\
+- Bad feature flag
+
+**Alert triggers**
+
+``` promql
 kube_pod_container_status_restarts_total increasing fast
+```
 
-
+``` promql
 kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}
+```
 
+### What the agent checks
 
-What the agent checks
+``` bash
+kubectl describe pod <pod-name>
+kubectl logs <pod-name> --previous
+```
 
+Common errors:
 
-kubectl describe pod → last termination exit code
+    missing required env VAR_X
+    failed to load config file
+    panic: ...
 
+### Proposed fix
 
-kubectl logs --previous → errors like:
+-   Identify missing env / wrong key\
+-   Point to correct Secret/ConfigMap key
 
+### Auto-fix (Safe)
 
-missing required env VAR_X
+-   Patch Deployment env var key or mount reference\
+-   Rollout restart
 
+**Guardrails** - Patch only whitelisted env keys\
+- Restrict auto-fix to non-prod (demo)
 
-failed to load config file
+------------------------------------------------------------------------
 
+## 2) CreateContainerConfigError: Secret/ConfigMap Not Found
 
-panic: ...
+**Why it's common** - Renamed/deleted secret\
+- Wrong namespace\
+- Helm reinstall\
+- ExternalSecrets delay
 
+**Alert trigger**
 
-Proposed fix
-
-
-identify missing env / wrong key; point to the correct Secret/ConfigMap key
-
-
-Auto-fix (safe)
-
-
-If you have “known-good” config in Git/SSOT: patch the Deployment env var key or mount reference + rollout restart
-
-
-Guardrails: only allow patching whitelisted env keys / only in non-prod for demo
-
-
-2) CreateContainerConfigError: Secret/ConfigMap not found
-Why it’s common: renamed secret, deleted secret, wrong namespace, Helm uninstall/reinstall, ExternalSecrets delayed.
-Alert trigger
-
-
+``` promql
 kube_pod_container_status_waiting_reason{reason="CreateContainerConfigError"}
+```
 
+### What the agent checks
 
-What the agent checks
+``` bash
+kubectl describe pod <pod-name>
+```
 
+Events may show:
 
-kubectl describe pod events show:
+    secret "X" not found
+    configmap "Y" not found
 
+### Proposed fix
 
-secret "X" not found
+-   Create missing Secret/ConfigMap\
+-   Fix incorrect reference
 
+### Auto-fix
 
-configmap "Y" not found
+-   Recreate from approved template\
+-   Trigger ExternalSecret re-sync
 
+**Guardrails** - Only from approved sources\
+- Never expose secret values
 
-Proposed fix
+------------------------------------------------------------------------
 
+## 3) ImagePullBackOff
 
-“Create secret/configmap X in namespace N” or “Fix reference to correct name”
+**Why it's common** - Wrong image tag\
+- Rotated registry token\
+- Missing pull secret
 
+**Alert trigger**
 
-Auto-fix (very L1-friendly)
-
-
-Recreate the missing Secret/ConfigMap from a template (for demo, store it in a safe internal repo / parameter store)
-
-
-If ExternalSecrets is used: nudge by re-sync / annotate ExternalSecret (depending on your operator)
-
-
-Guardrails: only recreate secrets from approved source; never print secret values in chat/logs
-
-
-3) ImagePullBackOff: wrong image tag or missing registry credentials
-Why it’s common: CI published different tag, typo in tag, rotated registry token, new namespace missing pull secret.
-Alert trigger
-
-
+``` promql
 kube_pod_container_status_waiting_reason{reason=~"ErrImagePull|ImagePullBackOff"}
+```
 
+### What the agent checks
 
-What the agent checks
+``` bash
+kubectl describe pod <pod-name>
+```
 
+Events may show:
 
-kubectl describe pod events like:
+    manifest unknown
+    pull access denied
+    toomanyrequests
 
+### Proposed fix
 
-manifest unknown
+-   Rollback to last-known-good tag\
+-   Fix/add imagePullSecret
 
+### Auto-fix
 
-pull access denied
+-   Patch Deployment image tag\
+-   Attach approved pull secret
 
+**Guardrails** - Same repo/app only\
+- Approval required in prod
 
-toomanyrequests
+------------------------------------------------------------------------
 
+## 4) Readiness Probe Failing
 
-Proposed fix
+**Why it's common** - Wrong path/port\
+- Slow startup\
+- Misconfigured service port
 
+### What the agent checks
 
-If manifest unknown: correct image tag (use last successful build tag)
+``` bash
+kubectl describe pod <pod-name>
+kubectl get endpoints <service-name>
+```
 
+Example:
 
-If pull access denied: add imagePullSecrets / fix secret
+    Readiness probe failed: HTTP 404/500
+    connection refused
 
+### Proposed fix
 
-Auto-fix
+-   Correct probe path/port\
+-   Adjust timeouts\
+-   Fix Service targetPort
 
+### Auto-fix
 
-Patch Deployment to last-known-good image tag (from your deployment history / GitOps)
+-   Patch readiness probe\
+-   Apply approved probe profile
 
+**Guardrails** - Do not weaken probes blindly
 
-Create/attach imagePullSecret from approved credentials store
+------------------------------------------------------------------------
 
+## 5) OOMKilled
 
-Guardrails: only rollback within same repo/app; require approval in prod
+**Why it's common** - Tight limits\
+- Traffic spike\
+- Memory leak
 
+**Alert trigger**
 
-4) Readiness probe failing: pod Running but not receiving traffic
-Why it’s common: wrong probe path/port after app change, slower startup, dependency check too strict, misconfigured service port.
-Alert trigger
-
-
-Service errors / 5xx increase (via ingress metrics) while pods look “up”
-
-
-kube_pod_status_ready{condition="true"} drops, or not ready endpoints
-
-
-What the agent checks
-
-
-kubectl describe pod shows Readiness probe failed: HTTP 404/500 or connection refused
-
-
-kubectl get endpoints <svc> shows empty or fewer endpoints
-
-
-Proposed fix
-
-
-Correct probe path/port OR adjust timeouts/initialDelay
-
-
-If port mismatch: fix Service targetPort
-
-
-Auto-fix (demo-safe)
-
-
-Patch readiness probe to the correct path/port (from app’s known config) or raise timeout threshold
-
-
-Guardrails: don’t weaken probes blindly; only apply approved “probe profiles” per service
-
-
-5) OOMKilled: memory limit too low / sudden spike
-Why it’s common: default limits too tight, traffic spike, memory leak, JVM/Node tuning.
-Alert trigger
-
-
+``` promql
 kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}
+```
 
+### What the agent checks
 
-Restarts + memory usage near limit (if metrics-server/Prometheus present)
+``` bash
+kubectl describe pod <pod-name>
+```
 
+Look for:
 
-What the agent checks
+    Reason: OOMKilled
 
+### Proposed fix
 
-kubectl describe pod last state reason OOMKilled
+-   Increase memory limit (25--50%)\
+-   Scale replicas if needed
 
+**Guardrails** - Cap maximum limit\
+- Ensure namespace quota compliance
 
-Metrics: container memory working set close to limit
+------------------------------------------------------------------------
 
+## 6) DNS Misconfiguration
 
-Proposed fix
+**Symptoms**
 
+    lookup service.namespace.svc.cluster.local: no such host
 
-Increase memory limit (and request) by a controlled increment, or scale replicas if CPU-bound too
+**Agent checks**
 
+``` bash
+kubectl exec -it <pod> -- nslookup <service>
+```
 
-Auto-fix
+------------------------------------------------------------------------
 
+## 7) SSL Certificate Expiration
 
-“Bump memory limit by 25–50%” + restart rollout
+**Symptoms** - TLS handshake failures\
+- 502/503 from ingress
 
+**Agent checks**
 
-Guardrails: cap maximum, require approval in prod, ensure namespace quota won’t be violated
+``` bash
+kubectl describe certificate
+kubectl describe ingress
+```
 
+------------------------------------------------------------------------
 
+## 8) 503 / 502 Errors
 
-Other issues:
-DNS misconfiguration
-SSL expiration/issues
-503 Service Temporarily Unavailable or 502 Bad Gateway(same like 503 depends on the controller error code changes) - Service to pod misconfiguration - No endpoints available 
+**Common causes** - No endpoints\
+- Service selector mismatch\
+- targetPort mismatch
+
+**Agent checks**
+
+``` bash
+kubectl get endpoints <service>
+kubectl describe service <service>
+kubectl logs <ingress-controller-pod>
+```
+
+------------------------------------------------------------------------
