@@ -28,26 +28,6 @@ spec:
               value: "8080"
             - name: STARTUP_DELAY_SECONDS
               value: "1"
-            - name: MEMORY_HOG_MB
-              value: "200"
-            # - name: FORCE_NOT_READY
-            #   value: "1"
-            # - name: VAR_X
-            #   valueFrom:
-            #     secretKeyRef:
-            #       name: demo-missing-secret
-            #       key: VAR_X
-            # - name: FAIL_MODE
-            #   value: "crash"
-            # - name: REQUIRE_ENV
-            #   value: "1"
-            # - name: REQUIRE_CONFIG
-            #   value: "1"
-            # - name: CONFIG_PATH
-            #   value: "/config/config.json"
-          # envFrom:
-          #   - configMapRef:
-          #       name: demo-missing-configmap
           readinessProbe:
             httpGet:
               path: /readyz
