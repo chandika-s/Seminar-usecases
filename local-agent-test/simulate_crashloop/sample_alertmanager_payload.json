@@ -1,0 +1,37 @@
+{
+  "receiver": "local-webhook",
+  "status": "firing",
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "CrashLoopBackOff",
+        "namespace": "default",
+        "pod": "crashloop-demo",
+        "container": "crash"
+      },
+      "annotations": {
+        "summary": "Pod crashloop-demo is in CrashLoopBackOff",
+        "description": "Pod default/crashloop-demo has been restarting repeatedly (CrashLoopBackOff)."
+      },
+      "startsAt": "2024-01-15T10:00:00Z",
+      "endsAt": "0001-01-01T00:00:00Z",
+      "generatorURL": ""
+    }
+  ],
+  "groupLabels": {
+    "alertname": "CrashLoopBackOff",
+    "namespace": "default"
+  },
+  "commonLabels": {
+    "alertname": "CrashLoopBackOff",
+    "namespace": "default",
+    "pod": "crashloop-demo"
+  },
+  "commonAnnotations": {
+    "summary": "Pod crashloop-demo is in CrashLoopBackOff"
+  },
+  "externalURL": "http://localhost:9093",
+  "version": "4",
+  "groupKey": "{}:CrashLoopBackOff"
+}

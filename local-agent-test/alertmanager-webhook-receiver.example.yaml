@@ -1,0 +1,34 @@
+# Add the webhook receiver to your Alertmanager config (merge with your existing receivers).
+#
+# Alertmanager runs IN the cluster (Docker Desktop). Webhook server runs on your HOST (python webhook_server.py).
+# From inside the cluster, "localhost" is the pod—so use one of the URLs below to reach the host.
+#
+# Webhook URL (try in this order if one fails):
+#   1. Host IP (most reliable):  http://<HOST_IP>:8080/webhook
+#        On host, get IP:  Mac: ipconfig getifaddr en0   Linux: hostname -I | awk '{print $1}'
+#   2. Docker Desktop (Mac/Win):  http://host.docker.internal:8080/webhook
+#        (On Linux Docker Desktop this may not resolve; use host IP instead.)
+#   3. Same machine as Alertmanager only:  http://localhost:8080/webhook
+#
+# Start webhook server on the host first:  cd local-agent-test && python webhook_server.py
+---
+receivers:
+  # Your existing email receiver stays as-is. Add:
+  - name: "agent-webhook"
+    webhook_configs:
+      # Replace with your host IP if host.docker.internal doesn't work (e.g. http://192.168.1.100:8080/webhook)
+      - url: "http://host.docker.internal:8080/webhook"
+        send_resolved: true
+
+# In your route tree, add a route that sends alerts to agent-webhook (and optionally continue to email).
+# Example: send CrashLoopBackOff (and similar) to the agent; keep your default for email.
+#
+# route:
+#   receiver: "your-email-receiver"
+#   group_by: ["alertname", "namespace"]
+#   routes:
+#     - match:
+#         alertname: CrashLoopBackOff
+#       receiver: "agent-webhook"
+#       continue: true
+#     # ... rest of your routes
