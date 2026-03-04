@@ -16,27 +16,20 @@ alertmanager:
       group_interval: 5m
       repeat_interval: 12h
       routes:
-        # Send critical alerts to n8n AND email
+        # Alerts disabled: all go to default receiver "null" (no notifications)
+        # Uncomment below to re-enable:
         # - receiver: "n8n"
-        #   matchers:
-        #     - severity="critical"
+        #   matchers: [ - severity="critical" ]
         #   continue: true
-
         # - receiver: "email"
-        #   matchers:
-        #     - severity="critical"
+        #   matchers: [ - severity="critical" ]
         #   continue: false
-
-        - receiver: "agent-webhook"
-          matchers:
-            - severity="critical"
-          continue: true
-
-        # Send warning alerts (e.g. DemoAppNotReady) to agent-webhook
-        - receiver: "agent-webhook"
-          matchers:
-            - severity="warning"
-          continue: true
+        # - receiver: "agent-webhook"
+        #   matchers: [ - severity="critical" ]
+        #   continue: true
+        # - receiver: "agent-webhook"
+        #   matchers: [ - severity="warning" ]
+        #   continue: true
 
     inhibit_rules:
       - source_matchers: [severity="critical"]

@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: alertmanager-agentcore-bridge
-  labels:
-    app.kubernetes.io/name: alertmanager-agentcore-bridge
