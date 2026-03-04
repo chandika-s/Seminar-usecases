@@ -1,10 +1,11 @@
-Install kube-promethus stack
+Install kube-prometheus stack (node-exporter disabled for local/Docker Desktop clusters to avoid CrashLoopBackOff)
 ```
 helm install prometheus-stack prometheus-community/kube-prometheus-stack \
   --namespace monitoring \
   --set grafana.adminPassword=admin \
   --set prometheus.prometheusSpec.podMonitorSelectorNilUsesHelmValues=false \
-  --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false
+  --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
+  --set prometheus-node-exporter.enabled=false
 ```
 
 Ensured Alertmanager Exists and Is Reachable

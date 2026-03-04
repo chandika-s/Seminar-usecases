@@ -18,19 +18,39 @@ kubectl create namespace monitoring
 ```
 
 ## Step 3: Install Kube-Prometheus Stack
-This chart installs Prometheus, Grafana, Alertmanager, and Node Exporters.
+This chart installs Prometheus, Grafana, Alertmanager, and optionally Node Exporter.
 ```bash
 helm install prometheus-stack prometheus-community/kube-prometheus-stack \
   --namespace monitoring \
   --set grafana.adminPassword=admin \
   --set prometheus.prometheusSpec.podMonitorSelectorNilUsesHelmValues=false \
-  --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false
+  --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
+  --set prometheus-node-exporter.enabled=false
 ```
 *Note: Default Grafana password is set to `admin`. Change this for production environments.*
+
+**Node Exporter disabled:** `prometheus-node-exporter.enabled=false` is set because the node-exporter DaemonSet often enters CrashLoopBackOff on local clusters (e.g. Docker Desktop Kubernetes) due to host path or permission issues. For local/demo use, Prometheus and Alertmanager are sufficient. Re-enable it (remove the `--set prometheus-node-exporter.enabled=false` line) if you need node metrics on a production cluster.
 
 ## Step 4: Verify Deployment
 ```bash
 kubectl get pods -n monitoring
+```
+
+### Disable node-exporter on an existing install
+If the stack is already installed and the node-exporter pod is in CrashLoopBackOff (e.g. on Docker Desktop), you can either upgrade via Helm or remove the DaemonSet manually.
+
+**Option A – Helm upgrade** (disables node-exporter in Helm state):
+```bash
+helm upgrade prometheus-stack prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  --reuse-values \
+  --set prometheus-node-exporter.enabled=false
+```
+*If you see a conflict on the Alertmanager Secret (e.g. you applied a custom `alertmanager-secret.yaml`), Helm may fail. Use Option B to remove the DaemonSet only, or run the upgrade with `--force` (Helm will overwrite the secret; re-apply your custom Alertmanager config afterward if needed).*
+
+**Option B – Remove the DaemonSet only** (stops CrashLoopBackOff without changing Helm values):
+```bash
+kubectl delete daemonset prometheus-stack-prometheus-node-exporter -n monitoring
 ```
 
 ## Step 5: Access Grafana Dashboard

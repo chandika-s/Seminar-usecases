@@ -1,0 +1,28 @@
+# Prometheus rule: fire a critical alert when a pod is in CrashLoopBackOff.
+# Ensures the webhook receives severity=critical and labels namespace, pod.
+# Apply in the monitoring namespace where kube-prometheus-stack runs.
+# Labels (release, etc.) must match your Prometheus ruleSelector so it picks up this rule.
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: oom-demo-critical
+  namespace: monitoring
+  labels:
+    release: prometheus-stack   # must match your Helm release name (e.g. helm install prometheus-stack ...)
+spec:
+  groups:
+    - name: oom-demo-alerts
+      interval: 30s
+      rules:
+        # Alert when oom-demo (or any pod) is CrashLoopBackOff; severity=critical for webhook routing
+        - alert: PodCrashLoopBackOffCritical
+          expr: |
+            kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"} == 1
+          for: 1m
+          labels:
+            severity: critical
+            alertname: PodCrashLoopBackOffCritical
+          annotations:
+            summary: "Pod in CrashLoopBackOff (critical)"
+            description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is in CrashLoopBackOff."

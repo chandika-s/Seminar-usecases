@@ -51,10 +51,11 @@ agent("Get the last 100 lines of logs for pod <POD_NAME> in namespace default")
 
 ## What the agent can do
 
-- **k8s_list_pods** – List pods in a namespace (with phase, reason, restart_count).
-- **k8s_get_logs** – Get recent logs for a pod.
-- **k8s_describe_pod** – Get pod description (phase, reason, container statuses).
-- **k8s_get_events** – Get recent events in a namespace (e.g. Failed, BackOff) for diagnosis.
+**Investigation:** `k8s_list_pods`, `k8s_get_logs`, `k8s_describe_pod`, `k8s_get_events`.
+
+**Auto-fix (when safe):** For OOMKilled the agent can patch the Deployment memory limit and run a rollout restart. For transient restarts it can run a rollout restart only. Tools: `k8s_get_deployment`, `k8s_patch_deployment_resources`, `k8s_rollout_restart`. Optional env: `K8S_MAX_MEMORY_LIMIT_MB` (default 2048).
+
+**Escalation (when it cannot fix):** For CreateContainerConfigError, missing env, or unknown cause the agent creates a JIRA ticket and sends a Slack notification. Tools: `create_jira_ticket`, `send_slack_notification`. Set `JIRA_BASE_URL`, `JIRA_PROJECT_KEY`, `JIRA_EMAIL`, `JIRA_API_TOKEN` and/or `SLACK_WEBHOOK_URL` in `.env` (see `.env.example`). If unset, the agent still reports what it would have done.
 
 The agent uses your default kubeconfig and OpenAI; no EKS IAM or proxy.
 

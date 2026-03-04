@@ -1,4 +1,5 @@
 .env
+.escalation_store.json
 __pycache__/
 .venv/
 venv/

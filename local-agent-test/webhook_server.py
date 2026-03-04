@@ -95,12 +95,37 @@ async def webhook(request: Request):
         alert_context_used,
     )
 
+    # Skip agent for kube-system and monitoring namespaces (local cluster known issues / stack components)
+    namespaces = {ctx["namespace"] for ctx in alert_context_used if ctx.get("namespace")}
+    if namespaces == {"kube-system"}:
+        response = "Ignored: kube-system namespace (local cluster known issues). No action taken."
+        return {
+            "status": "ok",
+            "alerts_count": alerts_count,
+            "alert_context_used": alert_context_used,
+            "response": response,
+        }
+    if namespaces == {"monitoring"}:
+        response = "Ignored: monitoring namespace (Prometheus/Alertmanager stack). No action taken."
+        return {
+            "status": "ok",
+            "alerts_count": alerts_count,
+            "alert_context_used": alert_context_used,
+            "response": response,
+        }
+
     prompt = _build_prompt(body)
     try:
         response = agent(prompt)
     except Exception as e:
         logger.exception("Agent run failed")
-        raise HTTPException(status_code=502, detail=f"Agent failed: {e}") from e
+        # Return 200 so Alertmanager does not report "sending alerts failed" and retry
+        return {
+            "status": "agent_failed",
+            "alerts_count": alerts_count,
+            "alert_context_used": alert_context_used,
+            "response": f"Agent run failed: {e!s}",
+        }
 
     return {
         "status": "ok",

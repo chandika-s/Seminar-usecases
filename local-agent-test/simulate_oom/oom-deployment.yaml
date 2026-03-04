@@ -1,0 +1,31 @@
+# Deployment that will be OOMKilled: 32Mi limit, process allocates ~64Mi.
+# Use this to test: Alertmanager (critical) → webhook → agent → auto-fix (patch memory + rollout).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oom-demo
+  namespace: default
+  labels:
+    app: oom-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oom-demo
+  template:
+    metadata:
+      labels:
+        app: oom-demo
+    spec:
+      containers:
+        - name: oom-demo
+          image: python:3.9-alpine
+          command:
+            - python3
+            - -c
+            - "x = bytearray(64 * 1024 * 1024); import time; time.sleep(3600)"
+          resources:
+            limits:
+              memory: "32Mi"
+            requests:
+              memory: "16Mi"
