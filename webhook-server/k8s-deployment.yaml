@@ -1,0 +1,76 @@
+# Example deployment for the Alertmanager webhook server on EKS.
+# Adjust namespace, image, and secrets to match your cluster.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: alertmanager-agent
+---
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: alertmanager-webhook-server
+  namespace: alertmanager-agent
+  labels:
+    app: alertmanager-webhook-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager-webhook-server
+  template:
+    metadata:
+      labels:
+        app: alertmanager-webhook-server
+    spec:
+      containers:
+        - name: webhook
+          image: alertmanager-webhook-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: webhook-secrets
+                  key: openai-api-key
+            # Optional: JIRA_*, SLACK_WEBHOOK_URL, ESCALATION_STORE_TTL_HOURS
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager-webhook-server
+  namespace: alertmanager-agent
+spec:
+  selector:
+    app: alertmanager-webhook-server
+  ports:
+    - port: 80
+      targetPort: 8080
+      name: http
+  type: ClusterIP
+---
+# Create this secret with your keys (do not commit real values):
+# kubectl create secret generic webhook-secrets -n alertmanager-agent \
+#   --from-literal=openai-api-key='sk-...'

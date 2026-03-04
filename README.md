@@ -6,8 +6,9 @@ This repo contains a DevOps demo: when Prometheus Alertmanager fires an alert (e
 
 | Component | Description |
 | --------- | ----------- |
-| **local-agent-test/** | Strands agent + local webhook server. Receives Alertmanager-style webhooks, runs the agent against your local K8s (e.g. Docker Desktop) to list pods, get logs, describe pods, and get events. The agent recommends a fix (no automatic execution). Uses OpenAI; see `local-agent-test/README.md`. |
-| **alertmanager-agentcore-bridge/** | HTTP service that receives Alertmanager webhooks and invokes a Bedrock AgentCore agent via `InvokeAgentRuntime`. Deploy this in Kubernetes (e.g. EKS) and point Alertmanager at it when you want the agent to run in AgentCore instead of locally. See `alertmanager-agentcore-bridge/README.md`. |
+| **local-agent-test/** | Strands agent + local webhook server. Receives Alertmanager webhooks, runs the agent against your local K8s (e.g. Docker Desktop). The agent can auto-fix (e.g. OOM memory patch + rollout restart) or escalate (JIRA + Slack). Uses OpenAI; see `local-agent-test/README.md`. |
+| **agentcore/** | Agent code for **Amazon Bedrock AgentCore Runtime**. Same troubleshooting logic as local-agent-test, adapted for direct code deployment to AgentCore. See `agentcore/README.md`. |
+| **webhook-server/** | Docker image and EKS manifests for the webhook server. Build and run the webhook in a container on EKS; app code lives in `local-agent-test/`. See `webhook-server/README.md`. |
 
 ## Quick start (local)
 

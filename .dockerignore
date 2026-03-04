@@ -1,0 +1,19 @@
+# Used when building webhook-server image (docker build -f webhook-server/Dockerfile .)
+# Exclude local-agent-test content that must not be in the image
+
+.git
+.gitignore
+*.md
+app/
+agentcore/
+monitoring/
+webhook-server/
+local-agent-test/.venv
+local-agent-test/venv
+local-agent-test/.env
+local-agent-test/.env.*
+!local-agent-test/.env.example
+local-agent-test/__pycache__
+local-agent-test/.escalation_store.json
+local-agent-test/AGENT_REMEDIATION_ROADMAP.md
+local-agent-test/simulate_oom
